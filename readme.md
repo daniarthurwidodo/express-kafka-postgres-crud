@@ -9,7 +9,7 @@ A RESTful API service that implements CRUD operations using Express.js, Apache K
 - PostgreSQL
 - Apache Kafka
 
-## Installation
+## Quick Start
 
 1. Clone the repository:
 
@@ -18,22 +18,34 @@ git clone <repository-url>
 cd express-kafka-postgres-crud
 ```
 
-2. Install dependencies:
+2. Copy environment file and update variables:
+
+```bash
+cp .env.example .env
+```
+
+3. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Start PostgreSQL and Kafka using Docker:
+4. Start infrastructure services:
 
 ```bash
 docker-compose up -d
 ```
 
-4. Initialize the database:
+5. Initialize database:
 
 ```bash
 npm run init-db
+```
+
+6. Start the application:
+
+```bash
+npm start
 ```
 
 ## Project Structure
@@ -41,23 +53,29 @@ npm run init-db
 ```
 .
 ├── src/
-│   └── index.js          # Main application file
+│   ├── config/           # Configuration files
+│   ├── controllers/      # Request handlers
+│   ├── routes/          # API routes
+│   ├── services/        # Business logic
+│   └── index.js         # Application entry point
 ├── scripts/
-│   ├── init-db.js        # Database initialization script
-│   └── reset-db.js       # Database reset script
-├── docker-compose.yml    # Docker services configuration
-├── package.json
+│   ├── init-db.js       # Database initialization
+│   └── reset-db.js      # Database reset
+├── docker-compose.yml   # Docker services
+├── .env                 # Environment variables
 └── README.md
 ```
 
-## API Endpoints
+## API Reference
 
-### Create Message
+### Messages API
 
-- **POST** `/message`
-- Creates a new message and sends it to Kafka
+#### Create Message
 
-```json
+```http
+POST /message
+Content-Type: application/json
+
 {
   "topic": "test-topic",
   "message": {
@@ -66,7 +84,7 @@ npm run init-db
 }
 ```
 
-- Response:
+Response:
 
 ```json
 {
@@ -80,24 +98,24 @@ npm run init-db
 }
 ```
 
-### Read Messages
+#### Get All Messages
 
-- **GET** `/messages`
-- Retrieves all messages
-- Response: Array of message objects
+```http
+GET /messages
+```
 
-### Read Single Message
+#### Get Single Message
 
-- **GET** `/messages/:id`
-- Retrieves a specific message by ID
-- Response: Single message object
+```http
+GET /messages/:id
+```
 
-### Update Message
+#### Update Message
 
-- **PUT** `/messages/:id`
-- Updates an existing message
+```http
+PUT /messages/:id
+Content-Type: application/json
 
-```json
 {
   "topic": "test-topic",
   "message": {
@@ -106,78 +124,116 @@ npm run init-db
 }
 ```
 
-- Response:
+#### Delete Message
 
-```json
-{
-  "status": "Message updated successfully!",
-  "updated": {
-    "id": "01HRBX...",
-    "topic": "test-topic",
-    "message": {"key": "updated-value"},
-    "updated_at": "2024-03-26T..."
-  }
-}
+```http
+DELETE /messages/:id
 ```
 
-### Delete Message
+## Development
 
-- **DELETE** `/messages/:id`
-- Deletes a message by ID
-- Response:
+### Database Management
 
-```json
-{
-  "status": "Message deleted successfully!",
-  "deleted": {
-    "id": "01HRBX...",
-    "topic": "test-topic",
-    "message": {"key": "value"}
-  }
-}
-```
-
-## Database Management
-
-Initialize database:
+Initialize new database:
 
 ```bash
 npm run init-db
 ```
 
-Reset database (warning: this will delete all data):
+Reset existing database:
 
 ```bash
 npm run reset-db
 ```
 
-## Running the Application
-
-Start the server:
+### Environment Variables
 
 ```bash
-npm start
+# Server Configuration
+PORT=3000
+
+# PostgreSQL Configuration
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=mydb
+POSTGRES_USER=user
+POSTGRES_PASSWORD=password
+
+# Kafka Configuration
+KAFKA_BROKERS=localhost:9092
+KAFKA_CLIENT_ID=my-app
 ```
 
-The server will run on `http://localhost:3000` by default.
+### Error Codes
 
-## Error Handling
+| Status | Description |
+|--------|-------------|
+| 200    | Success |
+| 400    | Bad Request - Invalid input |
+| 404    | Not Found - Resource doesn't exist |
+| 500    | Server Error |
 
-All endpoints return appropriate HTTP status codes:
+### Testing with cURL
 
-- 200: Success
-- 400: Bad Request
-- 404: Not Found
-- 500: Server Error
+Create a message:
 
-## Environment Variables
+```bash
+curl -X POST http://localhost:3000/message \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"test-topic","message":{"key":"value"}}'
+```
 
-The application uses the following default configuration:
+Get all messages:
 
-- PostgreSQL: localhost:5432
-- Kafka: localhost:9092
-- Application Port: 3000
+```bash
+curl http://localhost:3000/messages
+```
 
-## Graceful Shutdown
+Get single message:
 
-The application handles graceful shutdown for both Kafka and PostgreSQL connections when receiving a SIGTERM signal.
+```bash
+curl http://localhost:3000/messages/YOUR_MESSAGE_ID
+```
+
+Update message:
+
+```bash
+curl -X PUT http://localhost:3000/messages/YOUR_MESSAGE_ID \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"test-topic","message":{"key":"updated-value"}}'
+```
+
+Delete message:
+
+```bash
+curl -X DELETE http://localhost:3000/messages/YOUR_MESSAGE_ID
+```
+
+## Production
+
+### Docker Deployment
+
+```bash
+# Build and run all services
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+### Graceful Shutdown
+
+The application handles graceful shutdown by:
+
+- Closing Kafka connections
+- Closing database connections
+- Processing remaining requests
+
+Triggered by SIGTERM signal:
+
+```bash
+kill -TERM <pid>
+```
